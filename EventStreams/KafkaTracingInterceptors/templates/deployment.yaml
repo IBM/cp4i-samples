@@ -1,0 +1,186 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: icp4i-od-external-app-kafka-interceptors
+  labels:
+    app.kubernetes.io/instance: KafkaTracingSampleInterceptors
+    app.kubernetes.io/component: icp4i-od-external-app-app
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: icp4i-od-external-app-app
+  serviceName: icp4i-od-external-app-kafka-interceptors
+  replicas: 1
+  template:
+    metadata:
+      annotations:
+      labels:
+        app.kubernetes.io/instance: KafkaTracingSampleInterceptors
+        app.kubernetes.io/component: icp4i-od-external-app-app
+    spec:
+      volumes:
+      - name: icp4i-od-ca-certificate
+        secret:
+          secretName: icp4i-od-store-cred
+          optional: true
+      containers:
+
+      ####################################################
+      ###############     External App     ###############
+      ####################################################
+
+      - name: od-external-app
+        image: image-registry.openshift-image-registry.svc:5000/<<<<<APP_NAMESPACE>>>>>/kafkatracingsampleintercept:latest
+        resources:
+          limits:
+            cpu: 500m
+            memory: 512Mi
+          requests:
+            cpu: 256m
+            memory: 128Mi
+        readinessProbe:
+          exec:
+            command:
+            - /bin/sh
+            - -c
+            - echo
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          timeoutSeconds: 2
+          failureThreshold: 300
+        livenessProbe:
+          exec:
+            command:
+            - /bin/sh
+            - -c
+            - echo
+          periodSeconds: 10
+          timeoutSeconds: 2
+          failureThreshold: 3
+
+      ##########################################################
+      ###############     Sidecar - OD Agent     ###############
+      ##########################################################
+ 
+      - name: od-tracing-agent
+        image: image-registry.openshift-image-registry.svc:5000/<<<<<APP_NAMESPACE>>>>>/icp4i-od-agent:latest
+        command: ["/go/bin/agent-linux"]
+        args: 
+          - "--jaeger.tags=sourceNamespace=$(OD_SOURCE_NAMESPACE)"
+        ports:
+          - containerPort: 5775
+            protocol: UDP
+          - containerPort: 6831
+            protocol: UDP
+          - containerPort: 6832
+            protocol: UDP
+          - containerPort: 5778
+            protocol: TCP
+        env:
+          - name: COLLECTOR_HOST_PORT
+            value : localhost:14267
+          - name: REPORTER_TYPE
+            value : "grpc"
+          - name: REPORTER_GRPC_HOST_PORT
+            value : localhost:14250
+          - name: REPORTER_GRPC_TLS
+            value : "false"
+          - name: OD_SOURCE_NAMESPACE
+            value : <<<<<APP_NAMESPACE>>>>>
+        resources:
+          limits:
+            cpu: 500m
+            memory: 512Mi
+          requests:
+            cpu: 256m
+            memory: 128Mi
+        readinessProbe:
+          httpGet:
+            path: /?service=health
+            port: 5778
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          timeoutSeconds: 2
+          failureThreshold: 3  
+        livenessProbe:
+          tcpSocket:
+            port: 5778
+          initialDelaySeconds: 8
+          periodSeconds: 10
+          timeoutSeconds: 2
+          failureThreshold: 3
+
+      ##############################################################
+      ###############     Sidecar - OD Collector     ###############
+      ##############################################################
+
+      - name: od-tracing-collector
+        image: image-registry.openshift-image-registry.svc:5000/<<<<<APP_NAMESPACE>>>>>/icp4i-od-collector:latest
+        volumeMounts:
+          - name: icp4i-od-ca-certificate
+            mountPath: "/usr/share/jaeger/ca/certs" 
+        ports:
+          - containerPort: 14250
+            name: grpc
+            protocol: TCP
+          - containerPort: 14267
+            name: tchannel
+            protocol: TCP
+          - containerPort: 14268
+            name: http
+            protocol: TCP
+          - containerPort: 14269
+            name: healthcheck
+            protocol: TCP
+          - containerPort: 9411
+            name: zipkin
+            protocol: TCP
+          - containerPort: 14987
+            name: liveliness
+            protocol: TCP
+        env:
+          - name: SPAN_STORAGE_TYPE
+            value: elasticsearch
+          - name: ES_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: icp4i-od-store-cred
+                key: password
+          - name: ES_USERNAME
+            valueFrom:
+              secretKeyRef:
+                name: icp4i-od-store-cred
+                key: username
+          - name: ES_SERVER_URLS
+            value: https://od-store-od.<<<<<OD_NAMESPACE>>>>>.svc:9200 
+          - name: ES_TLS_CA
+            value: "/usr/share/jaeger/ca/certs/icp4i-od-cacert.pem"
+          - name: COLLECTOR_PORT
+            value: "14267"
+          - name: COLLECTOR_HTTP_PORT
+            value: "14268"
+          - name: COLLECTOR_ZIPKIN_HTTP_PORT
+            value: "9411"
+          - name: COLLECTOR_GRPC_TLS
+            value: "false"
+        resources:
+          limits:
+            cpu: 500m
+            memory: 512Mi
+          requests:
+            cpu: 256m
+            memory: 128Mi
+        readinessProbe:
+          httpGet:
+            port: 14269
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          timeoutSeconds: 2
+          failureThreshold: 3  
+        livenessProbe:
+          tcpSocket:
+            port: 14987
+          initialDelaySeconds: 8
+          periodSeconds: 10
+          timeoutSeconds: 2
+          failureThreshold: 3

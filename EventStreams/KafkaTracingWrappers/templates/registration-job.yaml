@@ -1,0 +1,12 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: icp4i-od-external-app-registration
+spec:
+  template:
+    spec:
+      containers:
+      - name: od-tracing-registration
+        image: image-registry.openshift-image-registry.svc:5000/<<<<<APP_NAMESPACE>>>>>/icp4i-od-agent:latest
+        command: ["curl", "-s", "--insecure", "https://icp4i-od.<<<<<OD_NAMESPACE>>>>>.svc:8090/tracing/register/<<<<<APP_NAMESPACE>>>>>/icp4i-od-external-app-kafka"]
+      restartPolicy: Never

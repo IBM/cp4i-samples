@@ -74,7 +74,7 @@ public class KafkaTracingSampleWithInterceptors {
         producerProps.setProperty("interceptor.classes", "io.opentracing.contrib.kafka.TracingProducerInterceptor");
         consumerProps.setProperty("interceptor.classes", "io.opentracing.contrib.kafka.TracingConsumerInterceptor");
       }
-  
+
       System.out.println("Creating Kafka producer");
       try (KafkaProducer<String, String> producer = new KafkaProducer<>(producerProps)) {
 

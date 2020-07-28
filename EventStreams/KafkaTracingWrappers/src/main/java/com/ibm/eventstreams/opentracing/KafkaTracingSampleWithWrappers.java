@@ -83,7 +83,7 @@ public class KafkaTracingSampleWithWrappers {
       // Configure tracing from the environment
       final Tracer tracer = Configuration.fromEnv().getTracer();
       GlobalTracer.registerIfAbsent(tracer);
-  
+
       CP4IODSpanDecorator spanDecorator = new CP4IODSpanDecorator(externalAppType, businessId);
 
       System.out.println("Creating Kafka producer");
@@ -91,14 +91,14 @@ public class KafkaTracingSampleWithWrappers {
         // Wrap the KafkaProducer with a TracingKafkaProduer that adds the required tags
 				TracingKafkaProducerBuilder<String, String> pBuilder = new TracingKafkaProducerBuilder<>(producer, tracer);
         pBuilder.withDecorators(Arrays.asList(SpanDecorator.STANDARD_TAGS, spanDecorator));
-        
+
 				try (TracingKafkaProducer<String, String> tracingProducer = pBuilder.build()) {
           System.out.println("Creating Kafka consumer");
           try (KafkaConsumer<String, String> consumer = new KafkaConsumer<>(consumerProps)) {
             // Wrap the KafkaProducer with a TracingKafkaProduer that adds the required tags
             TracingKafkaConsumerBuilder<String, String> cBuilder = new TracingKafkaConsumerBuilder<>(consumer, tracer);
             cBuilder.withDecorators(Arrays.asList(SpanDecorator.STANDARD_TAGS, spanDecorator));
-            
+
             try (TracingKafkaConsumer<String, String> tracingConsumer = cBuilder.build()) {
               tracingConsumer.subscribe(Arrays.asList(TOPIC_NAME));
 
@@ -130,7 +130,7 @@ public class KafkaTracingSampleWithWrappers {
   }
 
 
-  // SpanDecorator to insert the tags required for external apps tracing using the Operational Dashboard
+  // SpanDecorator to insert the tags required for external apps tracing using the Operations Dashboard
   public static class CP4IODSpanDecorator implements SpanDecorator {
 
     private final String externalAppTypeTag;

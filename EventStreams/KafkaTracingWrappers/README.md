@@ -151,7 +151,7 @@ Now you can use the following command to deploy the application:
 $ ./deploy.sh <project name> <OD namespace>
 ```
 
-The Kafka application will start producing and consuming records on the topic `opentracing-topic`. The pod created has 3 containers, but the tracing agent and collector will not start until the next step has been completed.
+The Kafka application will start producing and consuming messages on the topic `opentracing-topic`, once every 20 seconds. The pod created has 3 containers, but the tracing agent and collector will not start until the next step has been completed.
 
 ``` shell
 $ oc get pods
@@ -159,28 +159,32 @@ NAME                                                    READY     STATUS        
 icp4i-od-external-app-kafka-wrappers-59b78ff7b9-vwltd   1/3       CreateContainerConfigError   0          94s
 ```
 
-## Complete the registration process for the application
-The final stage is to register applications running in your project (or namespace) to send data to the Operations Dashboard.
+## Complete the registration process for the namespace
+**This process only needs to be carried out once per namespace. If you run more than one application in the namespace, it is not necessary to register a second time.**
 
-*This process only needs to be carried out once per namespace. If you run a second application in the namespace, it is not necessary to register a second time.*
+The Operations Dashboard will only display tracing data from external applications when a setting is enabled. You can find this in the Operations Dashboard Web Console, under the System Parameters settings in the Manage section of the console. In the Display parameters, enable the option to "Show external app data in dashboards". Now the Operations Dashboard is ready to receive data from external applications.
+
+The final stage is to register applications running in your project (or namespace) to send data to the Operations Dashboard.
 
 You can use the following command to begin the registration process:
 
 ``` shell
-./registration.sh <project name> <OD namespace>
+$ ./registration.sh <project name> <OD namespace>
 ```
 
-This starts a job which calls a REST API that begins the registration. Now you must go into the Operations Dashboard Web Console to approve the registration request. Once you have approved the request, you will see data appear in the Operations Dashboard Web Console.
+This starts a job which calls a REST API that begins the registration. Now you must go back into the Operations Dashboard Web Console to approve the registration request. You can find the list of registration requests in the Operations Dashboard Web Console, under the System Parameters settings in the Manage section of the console.
+
+Once you have approved the request, you will see data appear in the Operations Dashboard Web Console.
 
 ## Cleaning up
 The application will continue to run producing and consuming one event every 20 seconds. To stop the application, delete the deployment.
 
 ``` shell
-oc delete deployment icp4i-od-external-app-kafka-wrappers
+$ oc delete deployment icp4i-od-external-app-kafka-wrappers
 ```
 
 You might also want to clean up the registration job once it has completed.
 
 ``` shell
-oc delete job icp4i-od-external-app-registration
+$ oc delete job icp4i-od-external-app-registration
 ```
